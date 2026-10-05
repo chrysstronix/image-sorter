@@ -1,5 +1,14 @@
 # Image Sorter
 
+Double-click **Run Image Sorter.bat** on Windows or `run_image_sorter.sh` on
+Linux to check/install the required packages and open the GUI. On Linux, allow
+the shell file to run as a program if your file manager asks. You can also
+launch `run_image_sorter.py` from a terminal with the Python interpreter in
+your virtual environment.
+
+On macOS, double-click **Image Sorter.app**. Rebuild it after downloading or
+moving the project with `./build_macos_app.sh`.
+
 The app opens with a setup window. Choose the source folder to scan, choose
 one parent folder for destinations, then enter destination folder names to
 create inside it. The destination folders are created when you click

@@ -20,12 +20,14 @@ packages at startup; you can also run the updater yourself.
 
    ```powershell
    py -3 -m venv venv_imagesorter
-   .\venv_imagesorter\Scripts\python.exe package_updater.py
-   .\venv_imagesorter\Scripts\python.exe image_sorter.py
+   .\venv_imagesorter\Scripts\python.exe -m pip install -r requirements.txt
+   .\Run Image Sorter.bat
    ```
 
 If `py` is unavailable, use `python -m venv venv_imagesorter` if Python is on
 your PATH.
+After setup, double-click **Run Image Sorter.bat** to update packages and open
+the GUI.
 
 ## macOS
 
@@ -42,9 +44,27 @@ your PATH.
 
    ```sh
    python3 -m venv venv_imagesorter
-   ./venv_imagesorter/bin/python package_updater.py
-   ./venv_imagesorter/bin/python image_sorter.py
+   ./venv_imagesorter/bin/python -m pip install -r requirements.txt
+   chmod +x run_image_sorter.sh
+   ./run_image_sorter.sh
    ```
+
+After setup, double-click `run_image_sorter.sh` from a file manager configured
+to run executable text files. Otherwise launch it from Terminal with
+`./run_image_sorter.sh`.
+
+## macOS app
+
+After creating the sibling `venv_imagesorter` environment as shown above,
+build the double-clickable app:
+
+```sh
+./build_macos_app.sh
+```
+
+Then double-click **Image Sorter.app** in the project folder. The app runs the
+package updater before opening the GUI. If the project is moved, rebuild the
+app from its new location.
 
 ## Linux
 
@@ -80,16 +100,21 @@ your PATH.
 
    ```sh
    python3 -m venv venv_imagesorter
-   ./venv_imagesorter/bin/python package_updater.py
-   ./venv_imagesorter/bin/python image_sorter.py
+   ./venv_imagesorter/bin/python -m pip install -r requirements.txt
+   chmod +x run_image_sorter.sh
+   ./run_image_sorter.sh
    ```
+
+After setup, double-click `run_image_sorter.sh` from a file manager configured
+to run executable text files. Otherwise launch it from a terminal.
 
 ## Notes
 
 - The first package check needs an internet connection if dependencies are
   missing. `package_updater.py` reports installation errors rather than
   silently continuing.
-- Keep `image_sorter.py`, `package_updater.py`, and `requirements.txt` in the
-  same project folder.
+- Keep the launchers, `run_image_sorter.py`, `image_sorter.py`,
+  `package_updater.py`, `requirements.txt`, and
+  `macos_launcher.applescript` in the same project folder.
 - If Python reports that Tkinter is unavailable, install the Tk/Tcl component
   matching your Python distribution and version.

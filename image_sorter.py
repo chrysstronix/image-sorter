@@ -1302,9 +1302,10 @@ class ImageSorter:
         )
 
 
-def main() -> int:
+def main(*, update_packages: bool = True) -> int:
     try:
-        ensure_packages()
+        if update_packages:
+            ensure_packages()
         load_image_packages()
     except (PackageUpdateError, ImportError, OSError) as error:
         root = tk.Tk()
