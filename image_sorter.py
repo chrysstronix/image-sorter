@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Review photos and move each one into a destination folder."""
+"""Review images and move each one into a destination folder."""
 
 from __future__ import annotations
 
@@ -12,7 +12,7 @@ from tkinter import filedialog, messagebox, ttk
 from package_updater import PackageUpdateError, ensure_packages
 
 
-def load_photo_packages() -> None:
+def load_image_packages() -> None:
     global Image, ImageOps, ImageTk
     from PIL import Image as PillowImage
     from PIL import ImageOps as PillowImageOps
@@ -25,7 +25,7 @@ def load_photo_packages() -> None:
     register_heif_opener()
 
 
-PHOTO_EXTENSIONS = {
+IMAGE_EXTENSIONS = {
     ".avif",
     ".bmp",
     ".gif",
@@ -175,7 +175,7 @@ class SetupWindow:
         self._drag_offset = (14, 14)
         self._middle_scroll_active = False
 
-        root.title("Photo Sorter")
+        root.title("Image Sorter")
         root.geometry("900x740")
         root.minsize(680, 620)
         configure_styles(root)
@@ -202,7 +202,7 @@ class SetupWindow:
         self.folder_button_width = 220
         self.source_label = ttk.Label(
             self.folder_selectors,
-            text=str(self.source) if self.source else "No photo folder selected",
+            text=str(self.source) if self.source else "No image folder selected",
             wraplength=360,
             style="App.TLabel",
             anchor="w",
@@ -215,7 +215,7 @@ class SetupWindow:
         self.source_button_slot.grid(row=0, column=0, sticky="ew", pady=(0, 12))
         self.source_button = ttk.Button(
             self.source_button_slot,
-            text="Choose photo folder…",
+            text="Choose image folder…",
             command=self.choose_source,
             style="Browse.TButton",
         )
@@ -312,7 +312,7 @@ class SetupWindow:
             self.frame,
             text=(
                 "Drag a folder button to reorder it. Turn on Auto and choose a "
-                "file type to move matching photos there without review."
+                "file type to move matching images there without review."
             ),
             style="App.TLabel",
         ).pack(anchor="w", pady=(0, 6))
@@ -648,7 +648,7 @@ class SetupWindow:
 
     def choose_source(self) -> None:
         selected = filedialog.askdirectory(
-            parent=self.root, title="Choose the folder containing the photos"
+            parent=self.root, title="Choose the folder containing the images"
         )
         if selected:
             self.source = Path(selected).resolve()
@@ -690,7 +690,7 @@ class SetupWindow:
             ):
                 messagebox.showerror(
                     "Invalid destination root",
-                    "That root would put a destination inside the photo folder.",
+                    "That root would put a destination inside the image folder.",
                     parent=self.root,
                 )
                 return
@@ -787,8 +787,8 @@ class SetupWindow:
     def start_review(self) -> None:
         if self.source is None:
             messagebox.showerror(
-                "Choose a photo folder",
-                "Select the folder you want Photo Sorter to scan.",
+                "Choose an image folder",
+                "Select the folder you want Image Sorter to scan.",
                 parent=self.root,
             )
             return
@@ -860,10 +860,10 @@ class SetupWindow:
             return
 
         self.frame.destroy()
-        PhotoSorter(self.root, self.source, destinations, auto_rules)
+        ImageSorter(self.root, self.source, destinations, auto_rules)
 
 
-class PhotoSorter:
+class ImageSorter:
     def __init__(
         self,
         root: tk.Tk,
@@ -884,7 +884,7 @@ class PhotoSorter:
             (
                 path
                 for path in source.rglob("*")
-                if path.is_file() and path.suffix.lower() in PHOTO_EXTENSIONS
+                if path.is_file() and path.suffix.lower() in IMAGE_EXTENSIONS
             ),
             key=lambda path: str(path).casefold(),
         )
@@ -899,7 +899,7 @@ class PhotoSorter:
         self._auto_advance_job: str | None = None
         self._auto_failed_paths: set[Path] = set()
 
-        root.title("Photo Sorter")
+        root.title("Image Sorter")
         root.geometry("1100x850")
         root.minsize(760, 620)
         configure_styles(root)
@@ -974,7 +974,7 @@ class PhotoSorter:
             )
         self.skip_button = ttk.Button(
             self.review_controls,
-            text="Skip photo",
+            text="Skip image",
             command=self.skip_current,
             style="Secondary.TButton",
         )
@@ -994,8 +994,8 @@ class PhotoSorter:
 
         if not self.photos:
             messagebox.showinfo(
-                "Photo Sorter",
-                "No supported photo files were found in that folder or its subfolders.",
+                "Image Sorter",
+                "No supported image files were found in that folder or its subfolders.",
                 parent=root,
             )
             root.destroy()
@@ -1060,13 +1060,13 @@ class PhotoSorter:
     def show_current(self) -> None:
         if self.index >= len(self.photos):
             messagebox.showinfo(
-                "Photo Sorter", "You have reviewed all the photos.", parent=self.root
+                "Image Sorter", "You have reviewed all the images.", parent=self.root
             )
             self.root.destroy()
             return
 
         path = self.photos[self.index]
-        self.status.configure(text=f"Photo {self.index + 1} of {len(self.photos)}")
+        self.status.configure(text=f"Image {self.index + 1} of {len(self.photos)}")
         self.filename.configure(text=str(path.relative_to(self.source)))
         self.original_image = None
         self.image_error = False
@@ -1080,7 +1080,7 @@ class PhotoSorter:
             self.image_error = True
             self.preview.configure(
                 image="",
-                text=f"Unable to display this photo:\n{error}",
+                text=f"Unable to display this image:\n{error}",
                 wraplength=700,
             )
         else:
@@ -1118,9 +1118,9 @@ class PhotoSorter:
             self._auto_move_pending = False
             self._auto_failed_paths.add(path)
             messagebox.showerror(
-                "Could not automatically move photo",
+                "Could not automatically move image",
                 f"{path.name}\n\n{error}\n\n"
-                "The photo will remain available for manual review.",
+                "The image will remain available for manual review.",
                 parent=self.root,
             )
             for button in self.destination_buttons:
@@ -1152,7 +1152,7 @@ class PhotoSorter:
             self.move_photo_file(path, destination)
         except OSError as error:
             messagebox.showerror(
-                "Could not move photo",
+                "Could not move image",
                 f"{path.name}\n\n{error}",
                 parent=self.root,
             )
@@ -1171,7 +1171,7 @@ class PhotoSorter:
             )
         if not target.is_file():
             raise OSError(
-                f"The photo is no longer in the source, but the destination "
+                f"The image is no longer in the source, but the destination "
                 f"file was not found at {target}."
             )
 
@@ -1184,8 +1184,8 @@ class PhotoSorter:
     def stop_review(self) -> None:
         if messagebox.askyesno(
             "Stop reviewing?",
-            "Stop reviewing the remaining photos now?\n\n"
-            "Photos already moved will stay in their destination folders.",
+            "Stop reviewing the remaining images now?\n\n"
+            "Images already moved will stay in their destination folders.",
             parent=self.root,
         ):
             self.root.destroy()
@@ -1213,11 +1213,11 @@ class PhotoSorter:
 def main() -> int:
     try:
         ensure_packages()
-        load_photo_packages()
+        load_image_packages()
     except (PackageUpdateError, ImportError, OSError) as error:
         root = tk.Tk()
         root.withdraw()
-        messagebox.showerror("Photo Sorter setup failed", str(error), parent=root)
+        messagebox.showerror("Image Sorter setup failed", str(error), parent=root)
         root.destroy()
         return 1
 

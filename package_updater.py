@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Check and install Photo Sorter's declared Python dependencies."""
+"""Check and install Image Sorter's declared Python dependencies."""
 
 from __future__ import annotations
 
