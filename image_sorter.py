@@ -157,12 +157,14 @@ class SetupWindow:
         destination_root: Path | None = None,
         destinations: list[Path] | None = None,
         auto_rules: dict[Path, str] | None = None,
+        auto_suppressed_paths: set[Path] | None = None,
     ):
         self.root = root
         self.source = source
         self.destination_root = destination_root
         self.destinations = list(destinations or [])
         self.auto_rules = auto_rules or {}
+        self.auto_suppressed_paths = set(auto_suppressed_paths or ())
         self._drag_index: int | None = None
         self._selected_destination: int | None = None
         self.destination_rows: dict[Path, ttk.Frame] = {}
@@ -177,33 +179,35 @@ class SetupWindow:
 
         root.title("Image Sorter")
         root.geometry("900x740")
-        root.minsize(680, 620)
+        root.minsize(680, 500)
         configure_styles(root)
 
-        self.frame = ttk.Frame(root, padding=28, style="App.TFrame")
+        self.frame = ttk.Frame(root, padding=22, style="App.TFrame")
         self.frame.pack(fill="both", expand=True)
+        self.frame.grid_columnconfigure(0, weight=1)
+        self.frame.grid_rowconfigure(5, weight=1)
 
         ttk.Label(
             self.frame,
             text="Choose folders to get started",
             style="Title.TLabel",
-        ).pack(anchor="w", pady=(0, 16))
+        ).grid(row=0, column=0, sticky="w", pady=(0, 12))
         ttk.Label(
             self.frame,
             text="Select the folder to scan, then add one or more destination folders.",
             style="App.TLabel",
-        ).pack(anchor="w", pady=(0, 8))
+        ).grid(row=1, column=0, sticky="w", pady=(0, 4))
 
         self.folder_selectors = ttk.Frame(self.frame, style="App.TFrame")
-        self.folder_selectors.pack(fill="x", pady=(8, 24))
-        self.folder_selectors.grid_columnconfigure(0, weight=0, minsize=220)
+        self.folder_selectors.grid(row=2, column=0, sticky="ew", pady=(4, 14))
+        self.folder_selectors.grid_columnconfigure(0, weight=0, minsize=190)
         self.folder_selectors.grid_columnconfigure(1, weight=1)
 
         self.folder_button_width = 220
         self.source_label = ttk.Label(
             self.folder_selectors,
             text=str(self.source) if self.source else "No image folder selected",
-            wraplength=360,
+            wraplength=600,
             style="App.TLabel",
             anchor="w",
         )
@@ -228,7 +232,7 @@ class SetupWindow:
                 if self.destination_root
                 else "No destination root selected"
             ),
-            wraplength=360,
+            wraplength=600,
             style="App.TLabel",
             anchor="w",
         )
@@ -249,29 +253,37 @@ class SetupWindow:
         self.destination_root_button.pack(fill="both", expand=True)
 
         destination_name_row = ttk.Frame(self.frame, style="App.TFrame")
-        destination_name_row.pack(fill="x", pady=(0, 6))
+        destination_name_row.grid(row=3, column=0, sticky="ew", pady=(0, 3))
+        destination_name_row.grid_columnconfigure(0, weight=1)
         ttk.Label(
-            destination_name_row, text="New folder name:", style="App.TLabel"
-        ).pack(side="left")
+            destination_name_row,
+            text="New folder name:",
+            style="App.TLabel",
+        ).grid(row=0, column=0, sticky="w")
         self.destination_name = ttk.Entry(destination_name_row, style="App.TEntry")
-        self.destination_name.pack(side="left", fill="x", expand=True, padx=(8, 8))
+        self.destination_name.grid(row=1, column=0, sticky="ew")
         self.destination_name.bind("<Return>", lambda _event: self.add_destination())
         self.destination_name.bind("<KeyRelease>", self.update_destination_status)
-        ttk.Button(
+        self.add_destination_button = ttk.Button(
             destination_name_row,
             text="Add folder",
             command=self.add_destination,
             style="Secondary.TButton",
-        ).pack(side="left")
+        )
+        self.add_destination_button.grid(
+            row=2, column=0, sticky="e", pady=(4, 0)
+        )
         self.destination_status = ttk.Label(
             self.frame,
             text="Choose a root folder to see existing folders.",
             style="App.TLabel",
         )
-        self.destination_status.pack(anchor="w", fill="x", pady=(2, 8))
+        self.destination_status.grid(
+            row=4, column=0, sticky="ew", pady=(1, 4)
+        )
 
         destinations_area = ttk.Frame(self.frame, style="App.TFrame")
-        destinations_area.pack(fill="both", expand=True, pady=(6, 8))
+        destinations_area.grid(row=5, column=0, sticky="nsew", pady=(3, 4))
         destinations_area.grid_rowconfigure(0, weight=1)
         destinations_area.grid_columnconfigure(0, weight=1)
         self.destination_canvas = tk.Canvas(
@@ -308,26 +320,28 @@ class SetupWindow:
         self.root.bind_all("<B2-Motion>", self.middle_scroll)
         self.root.bind_all("<ButtonRelease-2>", self.finish_middle_scroll)
         self.render_destination_rows()
-        ttk.Label(
+        destination_help = ttk.Label(
             self.frame,
             text=(
                 "Drag a folder button to reorder it. Turn on Auto and choose a "
                 "file type to move matching images there without review."
             ),
             style="App.TLabel",
-        ).pack(anchor="w", pady=(0, 6))
+        )
+        destination_help.grid(row=6, column=0, sticky="ew", pady=(0, 3))
 
-        destination_actions = ttk.Frame(self.frame)
-        destination_actions.pack(fill="x")
+        destination_actions = ttk.Frame(self.frame, style="App.TFrame")
+        destination_actions.grid(row=7, column=0, sticky="ew")
         ttk.Button(
             destination_actions,
             text="Remove selected",
             command=self.remove_destination,
             style="Secondary.TButton",
+            padding=(8, 5),
         ).pack(side="left")
 
         footer = ttk.Frame(self.frame, style="App.TFrame")
-        footer.pack(fill="x", pady=(18, 0))
+        footer.grid(row=8, column=0, sticky="ew", pady=(10, 0))
         ttk.Button(
             footer,
             text="Exit",
@@ -341,21 +355,6 @@ class SetupWindow:
             style="Primary.TButton",
         )
         self.start_button.pack(side="right")
-        root.bind("<Configure>", self.on_resize)
-
-    def on_resize(self, _event: tk.Event) -> None:
-        if _event.widget is not self.root:
-            return
-        window_width = self.root.winfo_width()
-        available_width = max(1, window_width - 96)
-        button_width = min(300, max(220, round(available_width * 0.36)))
-        self.folder_button_width = button_width
-        self.folder_selectors.grid_columnconfigure(0, minsize=button_width)
-        self.source_button_slot.configure(width=button_width)
-        self.destination_root_button_slot.configure(width=button_width)
-        wraplength = max(160, available_width - button_width - 16)
-        self.source_label.configure(wraplength=wraplength)
-        self.destination_root_label.configure(wraplength=wraplength)
 
     def render_destination_rows(self, *, rebuild: bool = True) -> None:
         if rebuild and self._row_animation_id is not None:
@@ -860,7 +859,13 @@ class SetupWindow:
             return
 
         self.frame.destroy()
-        ImageSorter(self.root, self.source, destinations, auto_rules)
+        ImageSorter(
+            self.root,
+            self.source,
+            destinations,
+            auto_rules,
+            self.auto_suppressed_paths,
+        )
 
 
 class ImageSorter:
@@ -870,11 +875,13 @@ class ImageSorter:
         source: Path,
         destinations: list[Path],
         auto_rules: dict[Path, str] | None = None,
+        auto_suppressed_paths: set[Path] | None = None,
     ):
         self.root = root
         self.source = source
         self.destinations = destinations
         self.auto_rules = auto_rules or {}
+        self.auto_suppressed_paths = set(auto_suppressed_paths or ())
         self.auto_destinations = {
             extension: destination
             for destination, type_name in self.auto_rules.items()
@@ -889,6 +896,9 @@ class ImageSorter:
             key=lambda path: str(path).casefold(),
         )
         self.index = 0
+        self.reviewed_count = 0
+        self.replay_photos: list[Path] = []
+        self.manual_move_history: list[tuple[Path, Path]] = []
         self.original_image: Image.Image | None = None
         self.photo_image: ImageTk.PhotoImage | None = None
         self.image_error = False
@@ -968,29 +978,37 @@ class ImageSorter:
 
         self.review_controls = ttk.Frame(root, style="App.TFrame")
         self.review_controls.pack(fill="x", padx=24, pady=(4, 18))
-        for column in range(3):
+        for column in range(4):
             self.review_controls.grid_columnconfigure(
                 column, weight=1, uniform="controls"
             )
+        self.undo_button = ttk.Button(
+            self.review_controls,
+            text="Undo",
+            command=self.undo_last_manual_move,
+            style="Secondary.TButton",
+            state="disabled",
+        )
+        self.undo_button.grid(row=0, column=0, sticky="ew", padx=(0, 6))
         self.skip_button = ttk.Button(
             self.review_controls,
             text="Skip image",
             command=self.skip_current,
             style="Secondary.TButton",
         )
-        self.skip_button.grid(row=0, column=0, sticky="ew", padx=(0, 6))
+        self.skip_button.grid(row=0, column=1, sticky="ew", padx=6)
         ttk.Button(
             self.review_controls,
             text="Exit",
             command=self.stop_review,
             style="Stop.TButton",
-        ).grid(row=0, column=1, sticky="ew", padx=6)
+        ).grid(row=0, column=2, sticky="ew", padx=6)
         ttk.Button(
             self.review_controls,
             text="Return to folders",
             command=self.return_to_setup,
             style="Secondary.TButton",
-        ).grid(row=0, column=2, sticky="ew", padx=(6, 0))
+        ).grid(row=0, column=3, sticky="ew", padx=(6, 0))
 
         if not self.photos:
             messagebox.showinfo(
@@ -1058,15 +1076,29 @@ class ImageSorter:
         self.preview.configure(image=self.photo_image, text="")
 
     def show_current(self) -> None:
-        if self.index >= len(self.photos):
+        if not self.replay_photos and self.index >= len(self.photos):
+            if self.manual_move_history:
+                self.status.configure(text="Review complete")
+                self.filename.configure(text="All images have been reviewed.")
+                self.original_image = None
+                self.photo_image = None
+                self.preview.configure(image="", text="All images reviewed.")
+                self.auto_move_notice.place_forget()
+                for button in self.destination_buttons:
+                    button.configure(state="disabled")
+                self.skip_button.configure(state="disabled")
+                self.update_undo_button()
+                return
             messagebox.showinfo(
                 "Image Sorter", "You have reviewed all the images.", parent=self.root
             )
             self.root.destroy()
             return
 
-        path = self.photos[self.index]
-        self.status.configure(text=f"Image {self.index + 1} of {len(self.photos)}")
+        path = self.current_image_path()
+        self.status.configure(
+            text=f"Image {self.reviewed_count + 1} of {len(self.photos)}"
+        )
         self.filename.configure(text=str(path.relative_to(self.source)))
         self.original_image = None
         self.image_error = False
@@ -1089,13 +1121,16 @@ class ImageSorter:
         for button in self.destination_buttons:
             button.configure(state="disabled" if self.image_error else "normal")
         self.skip_button.configure(state="normal")
+        self.update_undo_button()
 
         if (
             not self.image_error
+            and path not in self.auto_suppressed_paths
             and path not in self._auto_failed_paths
             and path.suffix.lower() in self.auto_destinations
         ):
             self._auto_move_pending = True
+            self.update_undo_button()
             for button in self.destination_buttons:
                 button.configure(state="disabled")
             self.skip_button.configure(state="disabled")
@@ -1105,9 +1140,7 @@ class ImageSorter:
 
     def move_current_automatically(self, path: Path) -> None:
         self._auto_move_job = None
-        if not self._auto_move_pending or self.index >= len(self.photos):
-            return
-        if self.photos[self.index] != path:
+        if not self._auto_move_pending or self.current_image_path() != path:
             self._auto_move_pending = False
             return
 
@@ -1126,6 +1159,7 @@ class ImageSorter:
             for button in self.destination_buttons:
                 button.configure(state="disabled" if self.image_error else "normal")
             self.skip_button.configure(state="normal")
+            self.update_undo_button()
             return
 
         self.auto_move_notice.configure(text=f"Moved to {destination.name}")
@@ -1136,20 +1170,20 @@ class ImageSorter:
 
     def advance_after_automatic_move(self) -> None:
         self._auto_advance_job = None
-        self.index += 1
         self._auto_move_pending = False
+        self.consume_current_image()
         self.show_current()
 
     def move_current(self, destination: Path) -> None:
         if (
             self._auto_move_pending
             or self.image_error
-            or self.index >= len(self.photos)
+            or (not self.replay_photos and self.index >= len(self.photos))
         ):
             return
-        path = self.photos[self.index]
+        path = self.current_image_path()
         try:
-            self.move_photo_file(path, destination)
+            moved_path = self.move_photo_file(path, destination)
         except OSError as error:
             messagebox.showerror(
                 "Could not move image",
@@ -1157,11 +1191,12 @@ class ImageSorter:
                 parent=self.root,
             )
             return
-        self.index += 1
+        self.manual_move_history.append((path, moved_path))
+        self.consume_current_image()
         self.show_current()
 
     @staticmethod
-    def move_photo_file(path: Path, destination: Path) -> None:
+    def move_photo_file(path: Path, destination: Path) -> Path:
         target = unique_destination(destination, path.name)
         shutil.move(str(path), str(target))
         if path.exists():
@@ -1174,11 +1209,67 @@ class ImageSorter:
                 f"The image is no longer in the source, but the destination "
                 f"file was not found at {target}."
             )
+        return target
+
+    def current_image_path(self) -> Path:
+        if self.replay_photos:
+            return self.replay_photos[0]
+        return self.photos[self.index]
+
+    def consume_current_image(self) -> None:
+        if self.replay_photos:
+            self.replay_photos.pop(0)
+        else:
+            self.index += 1
+        self.reviewed_count += 1
+        self.update_undo_button()
+
+    def update_undo_button(self) -> None:
+        self.undo_button.configure(
+            state=(
+                "normal"
+                if self.manual_move_history and not self._auto_move_pending
+                else "disabled"
+            )
+        )
+
+    def undo_last_manual_move(self) -> None:
+        if not self.manual_move_history or self._auto_move_pending:
+            return
+
+        original_path, moved_path = self.manual_move_history[-1]
+        try:
+            if not moved_path.is_file():
+                raise OSError(f"The moved image was not found: {moved_path}")
+            if original_path.exists():
+                raise OSError(
+                    f"An image already exists at the original location: "
+                    f"{original_path}"
+                )
+            original_path.parent.mkdir(parents=True, exist_ok=True)
+            shutil.move(str(moved_path), str(original_path))
+            if moved_path.exists() or not original_path.is_file():
+                raise OSError("The image could not be restored to its original folder.")
+        except OSError as error:
+            messagebox.showerror(
+                "Could not undo move",
+                f"{original_path.name}\n\n{error}",
+                parent=self.root,
+            )
+            return
+
+        self.manual_move_history.pop()
+        self.replay_photos.insert(0, original_path)
+        self.auto_suppressed_paths.add(original_path)
+        self.reviewed_count = max(0, self.reviewed_count - 1)
+        self.show_current()
 
     def skip_current(self) -> None:
-        if self._auto_move_pending:
+        if self._auto_move_pending or (
+            not self.replay_photos and self.index >= len(self.photos)
+        ):
             return
-        self.index += 1
+        self.consume_current_image()
         self.show_current()
 
     def stop_review(self) -> None:
@@ -1207,6 +1298,7 @@ class ImageSorter:
             destination_root=self.destinations[0].parent if self.destinations else None,
             destinations=self.destinations,
             auto_rules=self.auto_rules,
+            auto_suppressed_paths=self.auto_suppressed_paths,
         )
 
 

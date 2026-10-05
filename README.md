@@ -8,7 +8,10 @@ automatically in the destination list as review choices. Enter a folder name
 manually to add a destination; the app indicates whether it already exists or
 will be created. Use **Exit** to close the setup window. Images in the source
 folder and its subfolders are processed one at a time. Choose a destination to
-move an image, or use **Skip image** to leave it where it is. If a destination
+move an image, use **Skip image** to leave it where it is, or choose **Undo**
+to reverse the most recent manual move. Undone images are shown again and
+remain available for preview after returning to setup, including when an
+automatic type rule is enabled. If a destination
 already has a file with the same name,
 the app adds a number to the new filename instead of overwriting it. Every
 move is checked to confirm the image is gone from the source and present in
